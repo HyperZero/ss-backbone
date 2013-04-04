@@ -1,63 +1,23 @@
-memoryStore = {}
-ids = 1
+BaseModel = require('./base/base_model')
+MemoryAdapter = require('../database_adapters/memory')
 
-module.exports = (req, res, ss) ->
+# grant create read and delete permissions for all fields
+ss.api.acl.allow 'public', ['Todo','Todo.content','Todo.order','Todo.id', 'Todo.done'], ['read','create','delete'], ()->
+# grant update permission for all fields except Todo.done
+ss.api.acl.allow 'public', ['Todo','Todo.content','Todo.order','Todo.id'], ['update'], ()->
+# add update permission to Todo.done
+ss.api.acl.allow 'public', ['Todo.done'], ['update'], ()->
+# grant all permissions in one go
+# ss.api.acl.allow 'public', ['Todo','Todo.content','Todo.order','Todo.id', 'Todo.done'], ['read','create','delete','update'], ()->
 
-  # Preload session data in to req.session
+module.exports = (req,res,ss)->
+  BaseModelClass = BaseModel(req,res,ss)
   req.use('session')
+  class TodoClass extends BaseModelClass
+    modelName: "Todo"
+    protectFields: true
+    databaseAdapter: new MemoryAdapter() #(Todo)
+  
+  return new TodoClass()
 
-  create: (model) ->
-    cid = req.cid
-    model.id = ids++
-    res =
-      cid: cid
-      model: model
-      method: "confirm"
-      modelname: "Todo"
 
-    memoryStore[model.id] = model
-    ss.publish.socketId req.socketId, "sync:Todo:" + cid, JSON.stringify(res)
-    delete res.cid
-
-    res.method = "create"
-    ss.publish.all "sync:Todo", JSON.stringify(res)
-
-  update: (model) ->
-    memoryStore[model.id] and (memoryStore[model.id] = model)
-    res =
-      model: model
-      method: "update"
-      modelname: "Todo"
-
-    res = JSON.stringify(res)
-    ss.publish.all "sync:Todo:" + model.id, res
-
-  read: (model) ->
-    fetchedModel = memoryStore[model.id]
-    res =
-      model: fetchedModel
-      method: "read"
-      modelname: "Todo"
-
-    ss.publish.socketId req.socketId, "sync:Todo:" + model.id, JSON.stringify(res)
-
-  # For collections requesting all models at once
-  readAll: (model) ->
-    models = []
-    for id of memoryStore
-      models.push memoryStore[id]
-    res =
-      models: models
-      method: "read"
-      modelname: "Todo"
-
-    ss.publish.socketId req.socketId, "sync:Todo", JSON.stringify(res)
-
-  delete: (model) ->
-    if delete memoryStore[model.id]
-      res =
-        method: "delete"
-        model: model
-        modelname: "Todo"
-
-      ss.publish.all "sync:Todo:" + model.id, JSON.stringify(res)

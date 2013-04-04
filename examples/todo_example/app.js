@@ -1,7 +1,7 @@
 // My SocketStream app
 
-var http = require('http')
-  , ss = require('socketstream');
+var http  = require('http');
+global.ss = require('socketstream');
 
 // Define a single-page client
 ss.client.define('main', {

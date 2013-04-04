@@ -134,3 +134,6 @@ $ ->
         todo.save done: done
   )
   App = new AppView
+  ss.event.onAny (data)->
+    # d = JSON.parse(data)
+    console.log 'EVENT', ss.event.event, data
