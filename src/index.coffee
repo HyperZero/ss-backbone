@@ -5,11 +5,12 @@ module.exports = (responderId, config, ss) ->
 
 	name = config && config.name || 'backbone'
 
-	underscore = fs.readFileSync(__dirname + '/../vendor/lib/underscore-min.js', 'utf8')
-	backbone = fs.readFileSync(__dirname + '/../vendor/lib/backbone-min.js', 'utf8')
+	unless config.dontSendLibs
+		underscore = fs.readFileSync(__dirname + '/../vendor/lib/underscore-min.js', 'utf8')
+		backbone = fs.readFileSync(__dirname + '/../vendor/lib/backbone-min.js', 'utf8')
+		ss.client.send('code', 'init', underscore)
+		ss.client.send('code', 'init', backbone)
 	backboneSync = fs.readFileSync(__dirname + '/client.' + (process.env['SS_DEV'] && 'coffee' || 'js'), 'utf8')
-	ss.client.send('code', 'init', underscore)
-	ss.client.send('code', 'init', backbone)
 	ss.client.send('code', 'init', backboneSync, {coffee: process.env['SS_DEV']})
 
 	client_api_registration = fs.readFileSync(__dirname + '/register.' + (process.env['SS_DEV'] && 'coffee' || 'js'), 'utf8')
@@ -32,6 +33,7 @@ module.exports = (responderId, config, ss) ->
 				modelName:  msg.modelname
 				cid:				msg.cid
 				method:     msg.method
+				params:     msg.params
 				socketId:   meta.socketId
 				clientIp:   meta.clientIp
 				sessionId:  meta.sessionId
