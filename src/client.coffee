@@ -56,6 +56,7 @@ window.syncedCollection = Backbone.Collection.extend
       modelname : modelname
       method : method
       model: model.toJSON()
+      params: options.params
     ss.backbone(req)
   initialize: () ->
     modelname = @.constructor.modelname
@@ -70,7 +71,7 @@ window.syncedCollection = Backbone.Collection.extend
         if msg.method == "create"
           @add(msg.model)
         if msg.method == "read"
-          @add(msg.models)
+          @add(msg.models, {merge:true})
 # window.Book = syncedModel.extend {},
 #   modelname: "Book"
 
