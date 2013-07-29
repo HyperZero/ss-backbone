@@ -31,7 +31,8 @@ window.syncedModel = Backbone.Model.extend
       throw "Cannot sync. You must set the name of the modelname on the Model class"
       delete @
     model = @
-    registerModel(model, modelname, attrs.id || model.cid)
+    @.idAttribute = @.idAttribute || 'id'
+    registerModel(model, modelname, attrs[@.idAttribute] || model.cid)
     deleted = false
     @on "backbone-sync-model", (res) ->
       console.log("Model triggered")
