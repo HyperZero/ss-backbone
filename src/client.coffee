@@ -2,13 +2,13 @@ registerModel = (model, modelname, id = undefined) ->
   modelID = id || model.cid
   modelRef = model
   unless ss.event.listeners("sync:#{modelname}:#{modelID}").length > 0
-    console.log "registering model"
+    console.log "registering model", modelname
     ss.event.on "sync:#{modelname}:#{modelID}", (msg) ->
       modelRef.trigger("backbone-sync-model", JSON.parse(msg))
 
 registerCollection = (collection, modelname) ->
   collectionRef = collection
-  console.log "registering collection"
+  console.log "registering collection", modelname
   ss.event.on "sync:#{modelname}", (msg) ->
     collectionRef.trigger("backbone-sync-collection", JSON.parse(msg))
 
@@ -17,15 +17,19 @@ registerCollection = (collection, modelname) ->
 window.syncedModel = Backbone.Model.extend
   sync: (method, model, options) ->
     modelname = @.constructor.modelname
+    next = null
+    next = options.next  if typeof options.next is "function"
     req = 
       modelname : modelname
       method : method
       model: model.toJSON()
+      params: options.params
     if model.isNew()
       req.cid = model.cid
-    ss.backbone(req)
+    console.log "Model upsync", req
+    ss.backbone(req, next)
 
-  initialize: (attrs) ->
+  initialize: (attrs={}) ->
     modelname = @.constructor.modelname
     if !modelname
       throw "Cannot sync. You must set the name of the modelname on the Model class"
@@ -35,18 +39,18 @@ window.syncedModel = Backbone.Model.extend
     registerModel(model, modelname, attrs[@.idAttribute] || model.cid)
     deleted = false
     @on "backbone-sync-model", (res) ->
-      console.log("Model triggered")
+      console.log "Model triggered"
       if res.e
         console.log (res.e)
       else
         if res.method == "confirm"
-          registerModel(model, modelname, res.model.id)
+          registerModel(model, modelname, res.model[@.idAttribute])
           @set(res.model)
         if res.method == "update"
           @set(res.model)
         if res.method == "delete"
           @trigger("destroy") if !deleted
-          @collection.remove(@.id) if @collection
+          @collection.remove(@.idAttribute) if @collection
           deleted = true
 
 window.syncedCollection = Backbone.Collection.extend
@@ -73,6 +77,7 @@ window.syncedCollection = Backbone.Collection.extend
           @add(msg.model)
         if msg.method == "read"
           @add(msg.models, {merge:true})
+        @trigger("change")
 # window.Book = syncedModel.extend {},
 #   modelname: "Book"
 
