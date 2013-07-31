@@ -1,26 +1,26 @@
-registerModel = (model, modelname, id = undefined) ->
+registerModel = (model, modelConnectionId, id = undefined) ->
   modelID = id || model.cid
   modelRef = model
-  unless ss.event.listeners("sync:#{modelname}:#{modelID}").length > 0
-    console.log "registering model", modelname
-    ss.event.on "sync:#{modelname}:#{modelID}", (msg) ->
+  unless ss.event.listeners("sync:#{modelConnectionId}:#{modelID}").length > 0
+    console.log "registering modelConnectionId", modelConnectionId
+    ss.event.on "sync:#{modelConnectionId}:#{modelID}", (msg) ->
       modelRef.trigger("backbone-sync-model", JSON.parse(msg))
 
-registerCollection = (collection, modelname) ->
+registerCollection = (collection, modelConnectionId) ->
   collectionRef = collection
-  console.log "registering collection", modelname
-  ss.event.on "sync:#{modelname}", (msg) ->
+  console.log "registering collection", modelConnectionId
+  ss.event.on "sync:#{modelConnectionId}", (msg) ->
     collectionRef.trigger("backbone-sync-collection", JSON.parse(msg))
-
-
 
 window.syncedModel = Backbone.Model.extend
   sync: (method, model, options) ->
-    modelname = @.constructor.modelname
+    modelname = @.constructor.modelname   
+    modelConnectionId = @.constructor.modelConnectionId || modelname
     next = null
     next = options.next  if typeof options.next is "function"
     req = 
       modelname : modelname
+      modelConnectionId : modelConnectionId
       method : method
       model: model.toJSON()
       params: options.params
@@ -31,20 +31,21 @@ window.syncedModel = Backbone.Model.extend
 
   initialize: (attrs={}) ->
     modelname = @.constructor.modelname
+    modelConnectionId = @.constructor.modelConnectionId || modelname
     if !modelname
       throw "Cannot sync. You must set the name of the modelname on the Model class"
       delete @
     model = @
     @.idAttribute = @.idAttribute || 'id'
-    registerModel(model, modelname, attrs[@.idAttribute] || model.cid)
+    registerModel(model, modelConnectionId, attrs[@.idAttribute] || model.cid)
     deleted = false
     @on "backbone-sync-model", (res) ->
-      console.log "Model triggered"
+      console.log "Model downsync", modelname, res
       if res.e
         console.log (res.e)
       else
         if res.method == "confirm"
-          registerModel(model, modelname, res.model[@.idAttribute])
+          registerModel(model, modelConnectionId, res.model[@.idAttribute])
           @set(res.model)
         if res.method == "update"
           @set(res.model)
@@ -55,29 +56,55 @@ window.syncedModel = Backbone.Model.extend
 
 window.syncedCollection = Backbone.Collection.extend
   sync: (method, model, options) ->
+    next = null
+    next = options.next  if typeof options.next is "function"
     modelname = @.constructor.modelname
-    console.log("Collection sync")
+    modelConnectionId = @.constructor.modelConnectionId || modelname
     req = 
       modelname : modelname
+      modelConnectionId : modelConnectionId
       method : method
       model: model.toJSON()
       params: options.params
-    ss.backbone(req)
+    console.log "Collection upsync", modelname, req, next
+    ss.backbone(req, next)
+  fetchWhere: (attributes, options) ->
+    attributes = attributes or {}
+    options = (if options then _.clone(options) else {})
+    options.parse = true  if options.parse is undefined
+    success = options.success
+    collection = this
+    options.success = (resp) ->
+      method = (if options.reset then "reset" else "set")
+      collection[method] resp, options
+      success collection, resp, options  if success
+      collection.trigger "sync", collection, resp, options
+    
+    wrapError this, options
+    model = new @model(attributes)
+    @sync "read", model, options    
   initialize: () ->
     modelname = @.constructor.modelname
+    modelConnectionId = @.constructor.modelConnectionId || modelname
     if !modelname
       throw "Cannot sync. You must set the name of the modelname on the Collection class"
       delete @
     else
       collection = @
-      registerCollection(collection, modelname)
+      registerCollection(collection, modelConnectionId)
       @on "backbone-sync-collection", (msg) ->
-        console.log("collection triggered")
+        console.log "collection downsync", modelname, msg
         if msg.method == "create"
           @add(msg.model)
         if msg.method == "read"
-          @add(msg.models, {merge:true})
+          @add(msg.models, {parse:true, merge:true})
         @trigger("change")
+        
+wrapError = (model, options) ->
+  error = options.error
+  options.error = (resp) ->
+    error model, resp, options  if error
+    model.trigger "error", model, resp, options
 # window.Book = syncedModel.extend {},
 #   modelname: "Book"
 
