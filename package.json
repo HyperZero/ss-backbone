@@ -1,8 +1,14 @@
 {
   "author": "Jeffrey Konowitch",
+  "contributors": [
+    {
+      "name": "Carsten Schmittberger",
+      "email": "carsten.schmittberger@gmail.com"
+    }
+  ],
   "name": "ss-backbone",
   "description": "Backbone backend over socket.io for SocketStream",
-  "version": "0.0.3",
+  "version": "0.0.6",
   "main": "./index.js",
   "dependencies": {},
   "devDependencies": {},

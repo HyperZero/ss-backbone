@@ -31,7 +31,7 @@ module.exports = (responderId, config, ss) ->
 
       req =
         modelName:  msg.modelname
-        modelConnectionId:    msg.modelConnectionId
+        modelConnectionId:  msg.modelConnectionId
         cid:        msg.cid
         method:     msg.method
         params:     msg.params
@@ -40,6 +40,9 @@ module.exports = (responderId, config, ss) ->
         sessionId:  meta.sessionId
         transport:  meta.transport
         receivedAt: Date.now()
+
+      # Adds model to req, to check against acl in middelware
+      req.model = model  if req.params.modelToReq
 
       handleError = (e) ->
         message = (meta.clientIp == '127.0.0.1') && e.stack || 'See server-side logs'

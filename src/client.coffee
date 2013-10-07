@@ -26,7 +26,7 @@ window.syncedModel = Backbone.Model.extend
       params: options.params
     if model.isNew()
       req.cid = model.cid
-    console.log "Model upsync", req
+    console.log "Model upsync", modelConnectionId, req
     ss.backbone(req, next)
 
   initialize: (attrs={}) ->
@@ -40,7 +40,7 @@ window.syncedModel = Backbone.Model.extend
     registerModel(model, modelConnectionId, attrs[@.idAttribute] || model.cid)
     deleted = false
     @on "backbone-sync-model", (res) ->
-      console.log "Model downsync", modelname, res
+      console.log "Model downsync", modelConnectionId, res
       if res.e
         console.log (res.e)
       else
@@ -66,7 +66,7 @@ window.syncedCollection = Backbone.Collection.extend
       method : method
       model: model.toJSON()
       params: options.params
-    console.log "Collection upsync", modelname, req, next
+    console.log "Collection upsync", modelConnectionId, req, next
     ss.backbone(req, next)
   fetchWhere: (attributes, options) ->
     attributes = attributes or {}
@@ -93,7 +93,7 @@ window.syncedCollection = Backbone.Collection.extend
       collection = @
       registerCollection(collection, modelConnectionId)
       @on "backbone-sync-collection", (msg) ->
-        console.log "collection downsync", modelname, msg
+        console.log "collection downsync", modelConnectionId, msg
         if msg.method == "create"
           @add(msg.model)
         if msg.method == "read"
