@@ -42,7 +42,7 @@ module.exports = (responderId, config, ss) ->
         receivedAt: Date.now()
 
       # Adds model to req, to check against acl in middelware
-      req.model = model  if req.params.modelToReq
+      req.model = model  if req.params and req.params.modelToReq
 
       handleError = (e) ->
         message = (meta.clientIp == '127.0.0.1') && e.stack || 'See server-side logs'
